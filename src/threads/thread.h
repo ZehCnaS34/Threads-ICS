@@ -81,9 +81,9 @@ typedef int tid_t;
 /* The `elem' member has a multiple purpose.  It can be an element in
    the run queue (thread.c), or it can be an element in a
    semaphore wait list (synch.c) or an element in timer sleeping list
-   (timer.c). It can be used these ways only because they are 
+   (timer.c). It can be used these ways only because they are
    mutually exclusive: only a thread in the ready state is on the
-   run queue, whereas only a thread in the blocked state is on a 
+   run queue, whereas only a thread in the blocked state is on a
    semaphore wait list or a timer sleeping list. */
 struct thread
   {
@@ -93,7 +93,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int base_priority;                  /* Base priority for priority donation */
+    int prio_s;                  /* Base priority for priority donation */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c, synch.c and timer.c. */
@@ -102,8 +102,8 @@ struct thread
     struct list locks;                  /* Locks held for priority donation. */
     struct lock *lock_waiting;          /* Lock waiting on for priority donation. */
 
-    int64_t wakeup_ticks;               /* Wakeup ticks used by timer sleep */
-    
+    int64_t wakeup_at_tick;               /* Wakeup ticks used by timer sleep */
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -157,10 +157,10 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-bool thread_wakeup_ticks_less(const struct list_elem *a,
+bool thread_wat_sm(const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux);
-bool thread_priority_large(const struct list_elem *a,
+bool thread_pri_lg(const struct list_elem *a,
                           const struct list_elem *b,
                           void *aux);
 
