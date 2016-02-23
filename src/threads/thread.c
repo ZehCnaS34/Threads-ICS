@@ -437,8 +437,7 @@ thread_donate_priority (struct thread *t)
   enum intr_level old_level = intr_disable ();
   thread_update_priority (t);
   /* If thread is in ready list, reorder it. */
-  if (t->status == THREAD_READY)
-    {
+  if (t->status == THREAD_READY) {
       list_remove (&t->elem);
       list_insert_ordered (&ready_list, &t->elem,
                            thread_pri_lg, NULL);
