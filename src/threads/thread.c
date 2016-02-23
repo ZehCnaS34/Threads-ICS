@@ -90,6 +90,7 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
+  // setting up the thread lists
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
@@ -173,8 +174,6 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
-  // Might not need this line
-  // enum intr_level old_level;
 
   ASSERT (function != NULL);
 
@@ -186,11 +185,6 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-
-  /* Prepare thread for first run by initializing its stack.
-     Do this atomically so intermediate values for the 'stack'
-     member cannot be observed. */
-  // old_level = intr_disable (); // TODO: Might not need this line
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -360,13 +354,17 @@ thread_foreach_sleeping (thread_action_func *func, void *aux)
     }
 }
 
+/* Put the thread passed as the argument into the sleeping_list
+   and block the current thread */
 void
 thread_sleep (struct thread *t) {
   enum intr_level ol = intr_disable();
 
+  // insert the thread into the sleeping list from smallest to largest.
   list_insert_ordered ( &sleeping_list, &t->sleep_elem,
     thread_wat_sm, NULL);
 
+  // block the currently running thread
   thread_block ( );
 
   intr_set_level( ol );
@@ -476,8 +474,8 @@ void
 thread_test_preemption (void)
 {
   enum intr_level old_level = intr_disable ();
-  if (!list_empty (&ready_list) && thread_current ()->priority <
-      list_entry (list_front (&ready_list), struct thread, elem)->priority)
+  if (!list_empty (&ready_list) &&
+      thread_current ()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority)
       thread_yield ();
   intr_set_level (old_level);
 }
@@ -513,26 +511,20 @@ thread_get_recent_cpu (void)
   return 0;
 }
 
-/* Compare wakeup ticks of two threads */
 bool
 thread_wat_sm(const struct list_elem *a,
-                         const struct list_elem *b,
-                         void *aux UNUSED)
-{
-  struct thread *pta = list_entry (a, struct thread, elem);
-  struct thread *ptb = list_entry (b, struct thread, elem);
-  return pta->wake_count_down < ptb->wake_count_down;
+              const struct list_elem *b,
+              void *aux UNUSED) {
+  return list_entry (a, struct thread, elem)->wake_count_down <
+    list_entry (b, struct thread, elem)->wake_count_down;
 }
 
-/* Compare priority of two thread. */
 bool
 thread_pri_lg(const struct list_elem *a,
-                      const struct list_elem *b,
-                      void *aux UNUSED)
-{
-  struct thread *pta = list_entry (a, struct thread, elem);
-  struct thread *ptb = list_entry (b, struct thread, elem);
-  return pta->priority > ptb->priority;
+              const struct list_elem *b,
+              void *aux UNUSED) {
+  return list_entry (a, struct thread, elem)->priority >
+    list_entry (b, struct thread, elem)->priority;
 }
 
 
@@ -621,10 +613,15 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+
+  // alarm
   t->priority = priority;
   t->prio_s = priority;
+
+  // lock init
   list_init (&t->locks);
   t->lock_waiting = NULL;
+
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
