@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+
+# create directory where you will extract pintos and cd into it
+# from now on we will refer to this directory as: /home/compsys
+
+# sudo apt-get install bochs bochs-x bochs-sdl xorg-dev ncurses-dev
+
+# getting the pintos files
+
+# ${PINTOS?"Need to set PINTOS"}
+
+PDIR=`pwd`
+
+# if there is no source
+if [ "$1" == "fetch" ]; then
+    if [ ! -d ./src ]; then
+        read -p "Are you sure?\nThe current source code will be deleted" -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]
+        then
+
+            # mkdir tmp dir if none
+            if [ ! -d ./tmp ]; then
+                mkdir ./tmp
+            fi
+
+            cd tmp
+            rm pintos.tar.gz
+            wget http://www.stanford.edu/class/cs140/projects/pintos/pintos.tar.gz
+            tar -zxvf pintos.tar.gz
+            mv ./pintos/src ../
+            cd ..
+
+
+            echo "Before We Continue the script, some env vars should be set\nIf you run without configuring you WILL receive ERRORS."
+            exit 0
+        else
+            echo "Nothing was deleted :)"
+            exit 1
+        fi
+    fi
+fi
+
+
+if [ "$1" == "clean" ]; then
+    echo "Cleaning"
+    read -p "Are you sure? The current source code will be deleted. (y/N):" -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+
+        #  not sure if i want to remove this
+        # if [ -d ./tmp ]; then
+        #   rm -rfv ./tmp
+        # fi
+
+        if [ -d ./src ]; then
+            cd $PDIR/src/threads
+            make clean
+            cd $PDIR/src/utils
+            make clean
+        fi
+
+        exit 0
+    else
+        echo "Nothing was deleted :)"
+        exit 0
+    fi
+fi
+
+
+if [ "$1" == "build" ]; then
+    if [ -d ./src ]; then
+        cd $PDIR/src/threads
+        make clean
+        cd $PDIR/src/utils
+        make clean
+    fi
+    
+    cd $PDIR/src/utils/
+    make
+    echo "Building Utils"
+    cd $PDIR/src/threads
+    make
+
+fi
+
+if [ "$1" == "test" ]; then
+    cd $PDIR/src/threads/build
+    make check
+fi
+
+if [ "$1" == "" ]; then
+    echo "Use a command next time"
+    exit 1
+else
+    echo "Done"
+fi
+
+# Now open the script 'pintos-gdb' in any text editor. Find the variable GDBMACROS and set it to point to
+# '/home/compsys/pintos/src/misc/gdb-macros'
+
+# make
+
+# This will compile the utilities in the folder
+
+# cd ..
+#
+# cd threads
+#
+# make
+
+# This will compile Pintos Kernel
+
+# cd ..
+#
+# cd utils
+
+# open file 'pintos' in any text editor.
+
+# line 257: replace 'kernel.bin” to path pointing to kernel.bin file at '/home/compsys/pintos/src/threads/build/kernel.bin'
+
+# open file 'Pintos.pm' in any text editor.
+
+# line 362: replace 'loader.bin' to '/home/compsys/pintos/src/threads/build/loader.bin'
+
+# now we are ready to run Pintos!
+
+# now add:  export PATH=/home/compsys/pintos/src/utils:$PATH   to .bachrc
+
+# export PATH=/home/compsys/Desktop/VMS/pintos/src/utils:$PATH
+#
+# pintos run alarm-multiple
+#
+# cd ..
+
+# cd tests
+
+# open file 'Make.tests' in any text editor.
+
+# line 54: delete '-v'
+
+# cd ..
+#
+# cd threads/build
+#
+# make check
+
+# When it finishes you should see
+
+# pass tests/threads/alarm-single
+# pass tests/threads/alarm-multiple
+# pass tests/threads/alarm-simultaneous
+# FAIL tests/threads/alarm-priority
+# pass tests/threads/alarm-zero
+# pass tests/threads/alarm-negative
+# FAIL tests/threads/priority-change
+# FAIL tests/threads/priority-donate-one
+# FAIL tests/threads/priority-donate-multiple
+# FAIL tests/threads/priority-donate-multiple2
+# FAIL tests/threads/priority-donate-nest
+# FAIL tests/threads/priority-donate-sema
+# FAIL tests/threads/priority-donate-lower
+# FAIL tests/threads/priority-fifo
+# FAIL tests/threads/priority-preempt
+# FAIL tests/threads/priority-sema
+# FAIL tests/threads/priority-condvar
+# FAIL tests/threads/priority-donate-chain
+# FAIL tests/threads/mlfqs-load-1
+# FAIL tests/threads/mlfqs-load-60
+# FAIL tests/threads/mlfqs-load-avg
+# FAIL tests/threads/mlfqs-recent-1
+# pass tests/threads/mlfqs-fair-2
+# pass tests/threads/mlfqs-fair-20
+# FAIL tests/threads/mlfqs-nice-2
+# FAIL tests/threads/mlfqs-nice-10
+# FAIL tests/threads/mlfqs-block
+# 20 of 27 tests failed.
+# make: *** [check] Error 1
