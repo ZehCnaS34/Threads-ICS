@@ -94,23 +94,15 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
-  struct thread *cur_thread;
-  enum intr_level old_level;
+  if (ticks <= 0) return;
+  struct thread* t = thread_current();
 
   ASSERT (intr_get_level () == INTR_ON);
-
-  old_level = intr_disable ();
-
-  /* Get current thread and set wakeup ticks. */
-  cur_thread = thread_current ();
-  cur_thread->wakeup_at_tick = timer_ticks () + ticks;
+  t->wake_count_down = ticks;
 
   /* Insert current thread to ordered sleeping list */
-  list_insert_ordered (&sleeping_thread_list, &cur_thread->elem,
-                       thread_wat_sm, NULL);
-  thread_block ();
+  thread_sleep( thread_current() );
 
-  intr_set_level (old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -182,33 +174,46 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
+
+
+// increments the sleep thread count, and upblocks when zero
+void wake_when_zero ( struct thread *t, void *aux UNUSED) {
+  if (t->status == THREAD_BLOCKED && t->wake_count_down > 0) {
+    t->wake_count_down -= 1;
+    if (t->wake_count_down == 0) {
+      thread_unblock (t);
+      list_remove (&t->sleep_elem);
+    }
+  }
+}
 
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  struct list_elem *pe;
-  struct thread *pt;
-  bool preempt = false;
+  // struct list_elem *e;
+  // struct thread *t;
+  // bool preempt = false;
 
   ticks++;
   thread_tick ();
 
   /* Check and wake up sleeping threads. */
-  while (!list_empty(&sleeping_thread_list))
-    {
-      pe = list_front (&sleeping_thread_list);
-      pt = list_entry (pe, struct thread, elem);
-      if (pt->wakeup_at_tick > ticks)
-        {
-          break;
-        }
-      list_remove (pe);
-      thread_unblock (pt);
-      preempt = true;
-    }
-  if (preempt)
-    intr_yield_on_return ();
+  // while (!list_empty(&sleeping_thread_list))
+  //   {
+  //     e = list_front (&sleeping_thread_list);
+  //     t = list_entry (e, struct thread, elem);
+  //     if (pt->wake_count_down > 0) break;
+  //     list_remove (e);
+  //     thread_unblock (t);
+  //     // preempt = true;
+  //   }
+
+  // thread_foreach ( wake_when_zero, NULL );
+  thread_foreach_sleeping ( wake_when_zero, NULL );
+
+  // if (preempt)
+  //   intr_yield_on_return ();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -98,11 +98,12 @@ struct thread
 
     /* Shared between thread.c, synch.c and timer.c. */
     struct list_elem elem;              /* List element. */
+    struct list_elem sleep_elem; /* reference to sleeping element */
 
     struct list locks;                  /* Locks held for priority donation. */
     struct lock *lock_waiting;          /* Lock waiting on for priority donation. */
 
-    int64_t wakeup_at_tick;               /* Wakeup ticks used by timer sleep */
+    int64_t wake_count_down;               /* Wakeup ticks used by timer sleep */
 
 
 #ifdef USERPROG
@@ -157,11 +158,15 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-bool thread_wat_sm(const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux);
-bool thread_pri_lg(const struct list_elem *a,
-                          const struct list_elem *b,
-                          void *aux);
+// defined functions
+
+bool thread_wat_sm(const struct list_elem*,
+                             const struct list_elem*,
+                             void*);
+bool thread_pri_lg(const struct list_elem*,
+                          const struct list_elem*,
+                          void*);
+
+void thread_sleep ( struct thread*);
 
 #endif /* threads/thread.h */

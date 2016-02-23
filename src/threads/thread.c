@@ -23,6 +23,7 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -92,6 +93,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleeping_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -343,6 +345,35 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+void
+thread_foreach_sleeping (thread_action_func *func, void *aux)
+{
+  struct list_elem *e;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (&sleeping_list); e != list_end (&sleeping_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, sleep_elem);
+      func (t, aux);
+    }
+}
+
+void
+thread_sleep (struct thread *t) {
+  enum intr_level ol = intr_disable();
+
+  list_insert_ordered ( &sleeping_list, &t->sleep_elem,
+    thread_wat_sm, NULL);
+
+  thread_block ( );
+
+  intr_set_level( ol );
+}
+
+
+
 /* Sets the current thread's priority to NEW_PRIORITY.
    If the priority is donated by another thread, it may
    not change immediately. */
@@ -490,7 +521,7 @@ thread_wat_sm(const struct list_elem *a,
 {
   struct thread *pta = list_entry (a, struct thread, elem);
   struct thread *ptb = list_entry (b, struct thread, elem);
-  return pta->wakeup_at_tick < ptb->wakeup_at_tick;
+  return pta->wake_count_down < ptb->wake_count_down;
 }
 
 /* Compare priority of two thread. */
