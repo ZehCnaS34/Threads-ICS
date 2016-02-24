@@ -1,0 +1,180 @@
+			+--------------------+
+			|       ECE 434      |
+			| PROJECT 1: THREADS |
+			|   DESIGN DOCUMENT  |
+			+--------------------+
+				   
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+FirstName LastName <netid@scarletmail.rutgers.edu>
+FirstName LastName <netid@scarletmail.rutgers.edu>
+FirstName LastName <netid@scarletmail.rutgers.edu>
+Alexander Sanchez <ar.sanchez@scarletmail.com>
+Christopher Steinert <chrisptopher.steinert@rutgers.edu>
+Omar Ouf <omarouf96@gmail.com>
+
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+			     ALARM CLOCK
+			     ===========
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+thread/thread.h:
+
+1) in struct thread added variable int64_t wake_count_down;
+   
+Purpose:
+This varaiable saves the tick when the thread is supposed to wake up after a timer_sleep call.
+
+2) in struct thread added variable struct list_elem sleep_elem;
+Purpose:
+For the insertion of elements into the sleeping_list;
+
+threads/thread.c
+
+3) added a list static struct list sleeping_list
+Purpose:
+List of processes that are in thread_sleep state, added by thread_sleep.
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to timer_sleep(),
+>> including the effects of the timer interrupt handler.
+
+The variable wake_count_down in the thread gets is initialized to the number of ticks it is supposed to sleep.
+The function Thread_sleep( thread_current() ) in thread.c gets called.
+It changes the status of the thread to BLOCKED and adds it to the sleeping_list. Then it calls schedule to schedule the next thread.
+Interrupts are off during that process to avoid race conditions.
+
+---- SYNCHRONIZATION ----
+
+>> A3: How are race conditions avoided when multiple threads call
+>> timer_sleep() simultaneously?
+
+The interrupts are turned off in the timer_sleep function. Also with the list structure for the sleeping threads, it doesn't
+matter in which order they get added to the waiting list.
+
+
+---- RATIONALE ----
+
+>> A4: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+The design uses the existing list structure and it was the easiest to implement in
+the allocated time-frame.
+
+			 PRIORITY SCHEDULING
+			 ===================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+threads/thread.h
+
+1. defined list locks
+
+Purpose: hold the locks that are available to the current thread.
+
+2. defined lock* pending_lock
+
+Purpose: To hold a reference to the lock the thread is waiting for.
+
+>> B2: Explain the data structure used to track priority donation.
+>> Use ASCII art to diagram a nested donation.  (Alternately, submit a
+>> .png file.)
+
+The datastructure used to track priority donation is a doubly linked list. The linked list contains locks that are ordered, and the thread with the highest priority is the thread that gets donated to.
+
+ --------    Held Locks     ------               ----------
+|        |   --------->    |      |             |          |
+| Thread |   Lock Holder   | Lock |   ------>   |Semaphore |
+|        |   <---------    |      |             |          |
+ --------                   ------               ---------- 
+               Threads Waiting        
+        <----------------------       
+                                      
+
+---- ALGORITHMS ----
+
+>> B3: How do you ensure that the highest priority thread waiting for
+>> a lock, semaphore, or condition variable wakes up first?
+
+Store them in the DL with from highest priority to lowest priority.
+
+>> B4: Describe the sequence of events when a call to lock_acquire()
+>> causes a priority donation.  How is nested donation handled?
+
+1. Get the current thread
+2. Check if the current lock holder isn't NULL
+3. give the current thread the lock
+4. if the threads priority is greator than the locks max_priority then donate priority to the thread
+5. keep doing (4.) util the the threads priority is less than the lock's max priority.
+6. Once done, set the semaphore down
+7. Then setup the new thread with the lock
+
+---- SYNCHRONIZATION ----
+
+>> B5: Describe a potential race in thread_set_priority() and explain
+>> how your implementation avoids it.
+
+A race condition can hapepn when two threads recive the donation because they have the same priority. In this implenation
+we only give the first thread in the DL the donation.
+
+
+---- RATIONALE ----
+
+>> B6: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+I chose this deisgn because I wanted to have minimal code that is easy to follow and maintain.
+Storing the information in an ordered makes getting the largest are smallest values makes fetch closer
+to O(1) rather than O(n).
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+Hard, too much time.
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+Yes. I know more of how to OS works.
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+Navigation of the code during class.
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+>> Any other comments?
+
+No.

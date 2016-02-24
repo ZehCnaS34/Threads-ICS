@@ -23,6 +23,9 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+
+/* List of processes that are in THREAD_SLEEP state.
+  added by `thread_sleep` */
 static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
@@ -92,8 +95,8 @@ thread_init (void)
 
   // setting up the thread lists
   lock_init (&tid_lock);
-  list_init (&ready_list);
   list_init (&all_list);
+  list_init (&ready_list);
   list_init (&sleeping_list);
 
   /* Set up a thread structure for the running thread. */
@@ -147,7 +150,7 @@ void
 thread_print_stats (void)
 {
   printf ("Thread: %lld idle ticks, %lld kernel ticks, %lld user ticks\n",
-          idle_ticks, kernel_ticks, user_ticks);
+	  idle_ticks, kernel_ticks, user_ticks);
 }
 
 /* Creates a new kernel thread named NAME with the given initial
@@ -167,7 +170,7 @@ thread_print_stats (void)
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
 thread_create (const char *name, int priority,
-               thread_func *function, void *aux)
+	       thread_func *function, void *aux)
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -205,7 +208,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 
   /* Test preemtpion. */
-  thread_test_preemption ();
+  thread_check_preempt ();
 
   return tid;
 }
@@ -244,7 +247,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_insert_ordered (&ready_list, &t->elem,
-                       thread_pri_lg, NULL);
+		       thread_pri_lg, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -316,7 +319,7 @@ thread_yield (void)
   old_level = intr_disable ();
   if (cur != idle_thread)
     list_insert_ordered (&ready_list, &cur->elem,
-                         thread_pri_lg, NULL);
+			 thread_pri_lg, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -360,9 +363,9 @@ void
 thread_sleep (struct thread *t) {
   enum intr_level ol = intr_disable();
 
-  // insert the thread into the sleeping list from smallest to largest.
-  list_insert_ordered ( &sleeping_list, &t->sleep_elem,
-    thread_wat_sm, NULL);
+  // insert the thread into the sleeping list from
+  // O(1) PERFORMANCE!!!
+  list_push_back ( &sleeping_list, &t->sleep_elem );
 
   // block the currently running thread
   thread_block ( );
@@ -379,19 +382,14 @@ void
 thread_set_priority (int new_priority)
 {
   struct thread *t = thread_current ();
-  int old_priority = t->priority;
 
-  /* Always update base priority. */
-  t->prio_s = new_priority;
+  t->prio_s = new_priority;	/* setting base priority */
 
-  /* Only update priority and test preemption if new priority
-     is smaller and current priority is not donated by another
-     thread. */
-  if ( list_empty (&t->locks))
-    if ( old_priority > new_priority ) {
-        t->priority = new_priority;
-        thread_test_preemption ();
-    }
+  /* if ( list_empty (&t->locks) ) */
+  if ( new_priority < t->priority ) {
+    t->priority = new_priority;
+    thread_check_preempt ();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -401,25 +399,36 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
-/* Add a held lock to current thread. */
-void
-thread_add_lock (struct lock *lock)
-{
-  enum intr_level old_level = intr_disable ();
-  list_insert_ordered (&thread_current ()->locks, &lock->elem,
-                       lock_priority_large, NULL);
 
-  /* Update priority and test preemption if lock's priority
-     is larger than current priority. */
-  if (lock->max_priority > thread_current ()->priority)
-    {
-      thread_current ()->priority = lock->max_priority;
-      thread_test_preemption ();
-    }
+/* Test if current thread should be preempted. */
+void
+thread_check_preempt (void)
+{
+  if (list_empty(&ready_list)) return;
+
+  enum intr_level old_level = intr_disable ();
+  if (thread_current ()->priority <
+      list_entry (list_front (&ready_list), struct thread, elem)->priority)
+    thread_yield ();
+
   intr_set_level (old_level);
 }
 
-/* Remove a held lock from current thread. */
+
+/* give lock to current thread if highest priority */
+void
+thread_add_lock (struct lock *lock)
+{
+  enum intr_level old_level = intr_disable (); /* no intr */
+  list_push_back (&thread_current ()->locks, &lock->elem); /* add */
+  list_sort(&thread_current ()->locks, lock_prio_lg, NULL); /* then sort */
+  struct thread* t = thread_current(); /* get cur thread */
+  if (t->priority < lock->max_priority) t->priority = lock->max_priority; /* is cur prio is lower that locks, set to max */
+  thread_check_preempt ();	/* check preempt */
+  intr_set_level (old_level);	/* set intr */
+}
+
+/* */
 void
 thread_remove_lock (struct lock *lock)
 {
@@ -430,19 +439,23 @@ thread_remove_lock (struct lock *lock)
   intr_set_level (old_level);
 }
 
+void
+intr_run_when_disabled (thread_action_func *func, void* aux)
+{
+  enum intr_level old_level = intr_disable();
+  struct thread* t = thread_current ();
+  func ( &t, aux );
+  intr_set_level (old_level);
+}
+
 /* Donate current thread's priority to another thread. */
 void
 thread_donate_priority (struct thread *t)
 {
-  enum intr_level old_level = intr_disable ();
-  thread_update_priority (t);
-  /* If thread is in ready list, reorder it. */
-  if (t->status == THREAD_READY) {
-      list_remove (&t->elem);
-      list_insert_ordered (&ready_list, &t->elem,
-                           thread_pri_lg, NULL);
-    }
-  intr_set_level (old_level);
+  enum intr_level old_level = intr_disable (); /* get old level */
+  thread_update_priority (t);		       /* update the thread prio */
+  if (t->status == THREAD_READY)  list_sort (&ready_list, thread_pri_lg, NULL); /* sort the readylist just in case */
+  intr_set_level (old_level);	/* set old intr level */
 }
 
 /* Update thread's priority. This function only update
@@ -450,34 +463,14 @@ thread_donate_priority (struct thread *t)
 void
 thread_update_priority (struct thread *t)
 {
-  enum intr_level old_level = intr_disable ();
-  int max_priority = t->prio_s;
-  int lock_priority;
-
-  /* Get locks' max priority. */
-  if (!list_empty (&t->locks))
-    {
-      list_sort (&t->locks, lock_priority_large, NULL);
-      lock_priority = list_entry (list_front (&t->locks),
-                                  struct lock, elem)->max_priority;
-      if (lock_priority > max_priority)
-        max_priority = lock_priority;
-    }
-
-  t->priority = max_priority;
-  intr_set_level (old_level);
+  enum intr_level old_level = intr_disable (); /* disable interrupt */
+  list_sort (&t->locks, lock_prio_lg, NULL);   /* sort lock priority */
+  if ( list_empty (&t->locks) ) t->priority = t->prio_s; /* if lock list empty, set thread to base priority */
+  else t->priority = list_entry (list_front (&t->locks),
+				 struct lock, elem)->max_priority; /* else set to locks max prio */
+  intr_set_level (old_level);	/* enable interrupts */
 }
 
-/* Test if current thread should be preempted. */
-void
-thread_test_preemption (void)
-{
-  enum intr_level old_level = intr_disable ();
-  if (!list_empty (&ready_list) &&
-      thread_current ()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority)
-      thread_yield ();
-  intr_set_level (old_level);
-}
 
 /* Sets the current thread's nice value to NICE. */
 void
@@ -511,17 +504,9 @@ thread_get_recent_cpu (void)
 }
 
 bool
-thread_wat_sm(const struct list_elem *a,
-              const struct list_elem *b,
-              void *aux UNUSED) {
-  return list_entry (a, struct thread, elem)->wake_count_down <
-    list_entry (b, struct thread, elem)->wake_count_down;
-}
-
-bool
 thread_pri_lg(const struct list_elem *a,
-              const struct list_elem *b,
-              void *aux UNUSED) {
+	      const struct list_elem *b,
+	      void *aux UNUSED) {
   return list_entry (a, struct thread, elem)->priority >
     list_entry (b, struct thread, elem)->priority;
 }
@@ -551,16 +536,16 @@ idle (void *idle_started_ UNUSED)
 
       /* Re-enable interrupts and wait for the next one.
 
-         The `sti' instruction disables interrupts until the
-         completion of the next instruction, so these two
-         instructions are executed atomically.  This atomicity is
-         important; otherwise, an interrupt could be handled
-         between re-enabling interrupts and waiting for the next
-         one to occur, wasting as much as one clock tick worth of
-         time.
+	 The `sti' instruction disables interrupts until the
+	 completion of the next instruction, so these two
+	 instructions are executed atomically.  This atomicity is
+	 important; otherwise, an interrupt could be handled
+	 between re-enabling interrupts and waiting for the next
+	 one to occur, wasting as much as one clock tick worth of
+	 time.
 
-         See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3a]
-         7.11.1 "HLT Instruction". */
+	 See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3a]
+	 7.11.1 "HLT Instruction". */
       asm volatile ("sti; hlt" : : : "memory");
     }
 }
@@ -619,7 +604,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   // lock init
   list_init (&t->locks);
-  t->lock_waiting = NULL;
+  t->pending_lock = NULL;
 
   t->magic = THREAD_MAGIC;
 

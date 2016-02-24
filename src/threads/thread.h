@@ -101,7 +101,7 @@ struct thread
     struct list_elem sleep_elem; /* reference to sleeping element */
 
     struct list locks;                  /* Locks held for priority donation. */
-    struct lock *lock_waiting;          /* Lock waiting on for priority donation. */
+    struct lock *pending_lock;          
 
     int64_t wake_count_down;               /* Wakeup ticks used by timer sleep */
 
@@ -151,7 +151,7 @@ void thread_set_priority (int);
 void thread_donate_priority (struct thread *);
 void thread_update_priority (struct thread *);
 
-void thread_test_preemption (void);
+void thread_check_preempt (void);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
@@ -159,14 +159,10 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 // defined functions
-
-bool thread_wat_sm(const struct list_elem*,
-                             const struct list_elem*,
-                             void*);
 bool thread_pri_lg(const struct list_elem*,
-                          const struct list_elem*,
-                          void*);
-
+                  const struct list_elem*,
+                  void*);
+void thread_foreach_sleeping (thread_action_func *, void *);
 void thread_sleep ( struct thread*);
 
 #endif /* threads/thread.h */

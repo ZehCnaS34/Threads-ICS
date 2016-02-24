@@ -71,10 +71,10 @@ last_mask (const struct bitmap *b)
 
 /* Creation and destruction. */
 
-/* Creates and returns a pointer to a newly allocated bitmap with room for
-   BIT_CNT (or more) bits.  Returns a null pointer if memory allocation fails.
-   The caller is responsible for freeing the bitmap, with bitmap_destroy(),
-   when it is no longer needed. */
+/* Initializes B to be a bitmap of BIT_CNT bits
+   and sets all of its bits to false.
+   Returns true if success, false if memory allocation
+   failed. */
 struct bitmap *
 bitmap_create (size_t bit_cnt) 
 {
