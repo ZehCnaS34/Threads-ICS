@@ -25,6 +25,13 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define CP_FRESH -1
+#define CP_EXIT 0
+#define CP_WAIT 1
+#define CP_LOAD 2
+#define CP_LOADING 3
+
+
 /* Thread prioriy donation. */
 #define PRIDON_MAX_DEPTH 9              /* Max depth of nested donation. */
 
@@ -88,10 +95,10 @@ typedef int tid_t;
 struct thread
   {
     /*
-     * files
+     * executable
      */
     struct file* exe;
-    struct child_process active_child;
+    struct child_process* active_child;
     struct list children; // containing child procceses
 
     /* Owned by thread.c. */
@@ -121,6 +128,18 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct child_process {
+  pid_t process_id;
+  pid_t parent_id;
+  list_elem* list_elem;
+  int status;
+};
+
+struct child_process* cp_build(void);
+struct child_process* cp_get(pid_t, struct child_process*);
+void cp_add(pid_t);
+void cp_remove(pid_t);
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

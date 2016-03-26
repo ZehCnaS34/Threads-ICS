@@ -210,8 +210,9 @@ thread_create (const char *name, int priority,
   /* Test preemtpion. */
   thread_check_preempt ();
 
-
   /* children AWESOME */
+  t->
+
   
 
   return tid;
@@ -612,6 +613,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   t->magic = THREAD_MAGIC;
 
+  // settings up the children list
+  list_init(&t->children);
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -730,3 +734,25 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+struct child_process*
+cp_build(void) {
+  struct child_process* cp;
+  struct list_elem* elem;
+  cp->status = CP_FRESH;
+  cp->list_elem = elem;
+  return cp;
+}
+
+void
+cp_add(pid_t proc_id, struct child_process* cp) {
+  ASSERT (proc_id != NULL);
+  ASSERT (cp != NULL);
+  struct thread* t = thread_current();
+  cp->process_id = proc_id;
+  cp->status = CP_LOAD;
+  list_push_back (&t->children, &cp->elem);
+  t->active_child = cp;
+}
+
+
