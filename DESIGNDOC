@@ -59,14 +59,21 @@ the size is doubled.
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
-as you cannot call strtok from multiple threads.. as it would not produce 
-the same value. whereas you can call strtok_r from multiple threads running at 
-the same time. and they wouldnt interfere.
+as you cannot call strtok from multiple threads.. as it strtok has a static pointer
+that is shared among all calls. whereas you can call strtok_r from multiple threads
+running at the same time. and they wouldnt interfere.
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
 
-- The kernel memory is 
+- The kernel memory cannot grow to much. therefore its much better to use 
+unix-like systems as then you dont waste valuable space of kernel. where if
+the kernel memeory is depleted . the entire system crashes.
+
+-seeing that the shell has access to the parameters before the kernel.
+ this allows the shell to check if for example the arguments are blank
+or if the user entered invalid characters.
+
 
 			     SYSTEM CALLS
 			     ============
