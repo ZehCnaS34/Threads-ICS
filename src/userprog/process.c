@@ -440,7 +440,56 @@ setup_stack (void **esp)
         *esp = PHYS_BASE;
       else
         palloc_free_page (kpage);
+        return success; // if couldnt create page.. free space and return failed
     }
+    
+  return success;
+  /* using this as a reference 
+  http://dynamicvoltage.blogspot.com/2012/09/pintos-project-2-argument-passing.html
+  */
+  char* token; // to hold parsed string parts
+  char** argv = malloc (DEFAULT_ARGV *sizeof (char *));
+  if(!argv)    { return false;}
+  int argc =0 , argv_size = DEFAULT_ARGV, i ;
+  token = strtok_r ( NULL , " " , save_ptr);
+  while(token != NULL) { 
+        *esp -= strlen(token) + 1;
+        argv[argc] = *esp;
+        argc++;
+        // Resize argv
+        if (argc >= argv_size) {
+            argv_size *= 2;
+            argv = realloc(argv, argv_size*sizeof(char *));
+            if(!argv)    { return false;}
+	}
+      memcpy(*esp, token, strlen(token) + 1);
+      token = strtok_r (NULL, " ", save_ptr)
+  }
+  argv[argc] = 0;
+  // Aligning the word size 
+  i = (size_t) *esp % WORD_SIZE;
+  if (i) {  // if i != 0 , decerement stack pointer by i. 
+      *esp -= i;
+      memcpy(*esp, &argv[argc], i);
+    }
+  // Pushing argv[i]
+  for (i = argc; i >= 0; i--){
+      *esp -= sizeof(char *);
+      memcpy(*esp, &argv[i], sizeof(char *));
+    }
+  // Push argv
+  token = *esp;
+  *esp -= sizeof(char **);
+  memcpy(*esp, &token, sizeof(char **));
+  // Push argc
+  *esp -= sizeof(int);
+  memcpy(*esp, &argc, sizeof(int));
+  // Push fake return addr
+  *esp -= sizeof(void *);
+  memcpy(*esp, &argv[argc], sizeof(void *));
+  // Free argv
+  free(argv);
+
   return success;
 }
 
