@@ -8,10 +8,9 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-
+Alexander Sanchez @domain.example>
+Chris Steinert chris13550@gmail.com
+Omar Ouf omarouf96@gmail.com
 
 ---- PRELIMINARIES ----
 
@@ -21,7 +20,8 @@ FirstName LastName <email@domain.example>
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course staff.
-
+http://dynamicvoltage.blogspot.com/2012/09/pintos-project-2-argument-passing.html
+http://www.scs.stanford.edu/07au-cs140/labs/project2aut07.pdf
 			   ARGUMENT PASSING
 			   ================
 
@@ -31,18 +31,41 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+NO Global or Static Variables.
+Added child_process in thread.h
+
+changed the following function declarations
+
+static bool setup_stack (void **esp, const char* file_name, char** save_ptr)
+bool load (const char *file_name, void (**eip) (void), void **esp, char **save_ptr)
+
+the function were redefined due to "start_process" placing a null pointer
+in the first space on the comand line & the need to parse the filename properly.
+The save_ptr is used to point to the arguments.
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 
+for argument parsing , the command line is parased in order and each argument
+character string is pushed onto the stack . while storing a pointer to the
+argument in the local char** variable.  
+since the exact size of the arguments is unknown. whenever the argv structure is full
+the size is doubled.
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+as you cannot call strtok from multiple threads.. as it would not produce 
+the same value. whereas you can call strtok_r from multiple threads running at 
+the same time. and they wouldnt interfere.
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+- The kernel memory is 
 
 			     SYSTEM CALLS
 			     ============
