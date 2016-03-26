@@ -132,7 +132,7 @@ struct thread
 struct child_process {
   pid_t process_id;
   pid_t parent_id;
-  list_elem* list_elem;
+  list_elem* elem;
   int status;
 };
 

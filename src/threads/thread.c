@@ -740,7 +740,7 @@ cp_build(void) {
   struct child_process* cp;
   struct list_elem* elem;
   cp->status = CP_FRESH;
-  cp->list_elem = elem;
+  cp->elem = elem;
   return cp;
 }
 
@@ -755,4 +755,30 @@ cp_add(pid_t proc_id, struct child_process* cp) {
   t->active_child = cp;
 }
 
+struct 
+child_process*
+cp_get(pid_t proc_id) {
+  ASSERT (proc_id != NULL);
+  struct list_elem* e;
+  struct thread* t = thread_current ();
+  for (e = list_begin (&t->children);
+      e != NULL;
+      e = list_next (e)) {
+    struct child_process* cp = list_entry (e, struct child_process, elem);
+    if (cp->process_id == proc_id) return cp;
+  }
+  return NULL;
+}
+
+void
+cp_remove(pid_t proc_id) {
+  struct thread* t = thread_current();
+  struct child_process* cp = cp_get(proc_id);
+  if (cp != NULL) {
+    list_remove (&cp->elem);
+  }
+  struct list_elem* e = list_begin (&t->children);
+  if (e != NULL) 
+    t->active_child = list_entry ( e, struct child_process, elem );
+}
 
