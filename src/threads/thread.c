@@ -211,8 +211,6 @@ thread_create (const char *name, int priority,
   thread_check_preempt ();
 
   /* children AWESOME */
-  t->
-
   
 
   return tid;
@@ -615,6 +613,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   // settings up the children list
   list_init(&t->children);
+
+  list_init(&t->files);
+  t->file_count = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

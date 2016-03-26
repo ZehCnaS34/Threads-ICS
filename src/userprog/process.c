@@ -15,6 +15,7 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -534,7 +535,21 @@ install_page (void *upage, void *kpage, bool writable)
 void
 add_file (void) {
   struct thread* t = thread_current();
-  struct my_file* my;
+  struct my_file* my = malloc(sizeof(struct my_file));
   my->pid = t->tid;
   list_push_back (&t->files, &mf->elem);
+  my->desc = file_count;
+  t->file_count += 1;
+}
+
+void
+rm_file (int desc) {
+  struct list_elem* e;
+  for ( e = list_begin(&thread_current()->files); e != NULL; e = list_next(e) ) {
+    struct my_file* my = list_entry (e, struct my_file, elem);
+    if (my->desc == desc) {
+      list_remove ( &e );
+      free(my);
+    }
+  }
 }

@@ -102,6 +102,7 @@ struct thread
     struct list children; // containing child procceses
 
     struct list files; // files that are assiciated thread
+    struct int file_count;
 
     /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
