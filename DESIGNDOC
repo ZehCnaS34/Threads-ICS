@@ -43,6 +43,7 @@ the function were redefined due to "start_process" placing a null pointer
 in the first space on the comand line & the need to parse the filename properly.
 The save_ptr is used to point to the arguments.
 
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
@@ -76,14 +77,50 @@ the same time. and they wouldnt interfere.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct child_process* active_child;
+struct list children; // containing child procceses
+struct list files; // files that are assiciated thread
+
+I've added them to create the association between the parent and the 
+child when creating a new child_process, and files that are associated with the thread.
+The active pointer is used for quick access to the next or currently used child_process.
+
+
+(typedef int pid_t) This typedef is similar to the one already defined in threads "tid_t", but is used to tell the difference between a thread process and a child process
+
+The child process data structure was defined. It is a relatively small datastructure
+that allows us to keep track of new processes that are spawned by threads.
+
+
+struct child_process {
+  pid_t process_id;
+  pid_t parent_id;
+  list_elem* elem;
+  int status;
+};
+
+struct my_file {
+	int parent_id;
+	int desc;
+	struct list_elem* elem;
+	struct file* file;
+}
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+File descriptors are associated with open files through the my_files struct.
+the my_file struct contains the file struct, which containes the data of the file,
+and contains description `desc`. Desc is the file description of the file.
+
+The file description is local per file.
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least

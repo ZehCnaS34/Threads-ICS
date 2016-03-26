@@ -530,3 +530,11 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+
+void
+add_file (void) {
+  struct thread* t = thread_current();
+  struct my_file* my;
+  my->pid = t->tid;
+  list_push_back (&t->files, &mf->elem);
+}
