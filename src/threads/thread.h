@@ -87,6 +87,13 @@ typedef int tid_t;
    semaphore wait list or a timer sleeping list. */
 struct thread
   {
+    /*
+     * files
+     */
+    struct file* exe;
+    struct child_process active_child;
+    struct list children; // containing child procceses
+
     /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
