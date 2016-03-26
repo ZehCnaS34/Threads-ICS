@@ -210,6 +210,10 @@ thread_create (const char *name, int priority,
   /* Test preemtpion. */
   thread_check_preempt ();
 
+
+  /* children AWESOME */
+  
+
   return tid;
 }
 
